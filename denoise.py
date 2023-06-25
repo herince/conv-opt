@@ -1,7 +1,5 @@
 import os
-import numbers
 import imageio.v2 as iio
-import matplotlib.pyplot as plt
 import numpy as np
 import skimage
 
