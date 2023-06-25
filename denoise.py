@@ -22,6 +22,25 @@ def divergence(m):
     n = len(m)
     return np.ufunc.reduce(np.add, [np.gradient(m[i], axis=i) for i in range(n)])
 
+def gradient_descent(path, img):
+    tau = 0.1
+    lambda_ = 50
+    denoised_img = img.astype(float)
+
+    initial_max = max(map(max, denoised_img))
+
+    denoised_img = normalize(denoised_img)
+
+    for _ in range(1, 50):
+        gr = np.gradient(denoised_img)
+        denoised_img = denoised_img - tau * (denoised_img - g_img_out - lambda_ * divergence(gr))
+        denoised_img = normalize(denoised_img)
+
+    denoised_img = (denoised_img * initial_max).astype(np.uint8)
+    write_file(path, denoised_img)
+
+    return denoised_img
+
 def normalize(img):
     if img.ndim == 3:
         # TODO
@@ -58,28 +77,16 @@ for file_name in test_files:
     write_file(output_dir + "salt-and-pepper/" + file_name, sp_img_out)
 
     # Gradient descent
-    tau = 0.1
-    lambda_ = 50
-    denoised_img = g_img_out.astype(float)
-
-    initial_max = max(map(max, denoised_img))
-
-    denoised_img = normalize(denoised_img)
-
-    for _ in range(1, 50):
-        gr = np.gradient(denoised_img)
-        denoised_img = denoised_img - tau * (denoised_img - g_img_out - lambda_ * divergence(gr))
-        denoised_img = normalize(denoised_img)
-
-    denoised_img = (denoised_img * initial_max).astype(np.uint8)
-    write_file(output_dir + "denoised-g/" + file_name, denoised_img)
+    g_img_denoised = gradient_descent(output_dir + "denoised-g/" + file_name, g_img_out)
+    p_img_denoised = gradient_descent(output_dir + "denoised-p/" + file_name, p_img_out)
+    sp_img_denoised = gradient_descent(output_dir + "denoised-sp/" + file_name, sp_img_out)
 
     # L2H1
 
     # Generate diffs
-    generate_diff(denoised_img, img, output_dir + "diff-g/" + file_name)
-    # generate_diff(g_img_out, img, output_dir + "diff-p/" + file_name)
-    # generate_diff(sp_img_out, img, output_dir + "diff-sp/" + file_name)
+    generate_diff(g_img_denoised, img, output_dir + "diff-g/" + file_name)
+    generate_diff(p_img_denoised, img, output_dir + "diff-p/" + file_name)
+    generate_diff(sp_img_denoised, img, output_dir + "diff-sp/" + file_name)
 
     # TODO: MSE
 
