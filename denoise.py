@@ -2,6 +2,7 @@ import os
 import imageio.v2 as iio
 import numpy as np
 import skimage
+import math
 
 test_files_dir = "test-images/"
 output_dir = "output/"
@@ -40,54 +41,69 @@ def gradient_descent(path, img):
     return denoised_img
 
 def normalize(img):
-    if img.ndim == 3:
-        # TODO
-        return img
-
-    else:
-        minimum = min(map(min, img))
-        maximum = max(map(max, img))
-
-        for i in range(0, len(img)):
-            for j in range(0, len(img[i])):
-                if (maximum - img[i][j]) > 0:
-                    img[i][j] = (img[i][j] - minimum) / ((maximum - minimum))
-                else:
-                    img[i][j] = 0
+    minimum = min(map(min, img))
+    maximum = max(map(max, img))
+    for i in range(0, len(img)):
+        for j in range(0, len(img[i])):
+            if (maximum - img[i][j]) > 0:
+                img[i][j] = (img[i][j] - minimum) / ((maximum - minimum))
+            else:
+                img[i][j] = 0
     return img
+
+def mse(img, denoised_img):
+    return np.mean((img - denoised_img) ** 2)
+
+def psnr(img, denoised_img):
+    mse_value = mse(img, denoised_img)
+    if mse_value == 0:
+        return 100
+    max_value = 255.0
+    psnr = 20 * math.log10(max_value / math.sqrt(mse_value))
+    return psnr
 
 for file_name in test_files:
     file_path = test_files_dir + file_name
     print("File:", file_path)
     
     img = iio.imread(file_path)
+    if img.ndim == 3:
+        # TODO - handle non B&W images
+        print("Skip RGB images\n")
+        continue
 
     # Apply Gaussian noise
     g_img_out = (skimage.util.random_noise(img, mode="gaussian", mean=0, var=0.00025) * 255).astype(np.uint8) 
-    write_file(output_dir + "gaussian-noise/" + file_name, g_img_out)
+    write_file(f"{output_dir}gaussian-noise/{file_name}", g_img_out)
 
     # Apply Poisson noise
     p_img_out = (skimage.util.random_noise(img, mode="poisson") * 255).astype(np.uint8)
-    write_file(output_dir + "poisson-noise/" + file_name, p_img_out)
+    write_file(f"{output_dir}poisson-noise/{file_name}", p_img_out)
 
     # Apply salt-and-pepper noise
     sp_img_out = (skimage.util.random_noise(img, mode="s&p", amount=0.25) * 255).astype(np.uint8)
-    write_file(output_dir + "salt-and-pepper/" + file_name, sp_img_out)
+    write_file(f"{output_dir}salt-and-pepper/{file_name}", sp_img_out)
 
     # Gradient descent
-    g_img_denoised = gradient_descent(output_dir + "denoised-g/" + file_name, g_img_out)
-    p_img_denoised = gradient_descent(output_dir + "denoised-p/" + file_name, p_img_out)
-    sp_img_denoised = gradient_descent(output_dir + "denoised-sp/" + file_name, sp_img_out)
+    g_img_denoised = gradient_descent(f"{output_dir}denoised-g/{file_name}", g_img_out)
+    p_img_denoised = gradient_descent(f"{output_dir}denoised-p/{file_name}", p_img_out)
+    sp_img_denoised = gradient_descent(f"{output_dir}denoised-sp/{file_name}", sp_img_out)
 
     # L2H1
 
     # Generate diffs
-    generate_diff(g_img_denoised, img, output_dir + "diff-g/" + file_name)
-    generate_diff(p_img_denoised, img, output_dir + "diff-p/" + file_name)
-    generate_diff(sp_img_denoised, img, output_dir + "diff-sp/" + file_name)
+    generate_diff(g_img_denoised, img, f"{output_dir}diff-g/{file_name}")
+    generate_diff(p_img_denoised, img, f"{output_dir}diff-p/{file_name}")
+    generate_diff(sp_img_denoised, img, f"{output_dir}diff-sp/{file_name}")
 
-    # TODO: MSE
+    # MSE
+    print(mse(img, g_img_denoised))
+    print(mse(img, p_img_denoised))
+    print(mse(img, sp_img_denoised))
 
-    # TODO: PSNR
+    # PSNR
+    print(psnr(img, g_img_denoised))
+    print(psnr(img, p_img_denoised))
+    print(psnr(img, sp_img_denoised))
 
     print()
