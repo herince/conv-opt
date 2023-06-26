@@ -46,6 +46,9 @@ def normalize(img):
                 img[i][j] = 0
     return img
 
+def mae(img, denoised_img):
+    return np.mean(img - denoised_img)
+
 def mse(img, denoised_img):
     return np.mean((img - denoised_img) ** 2)
 
@@ -66,7 +69,7 @@ if __name__ == "__main__":
     for file_name in test_files:
         file_path = test_files_dir + file_name
         print("File:", file_path)
-
+        
         img = iio.imread(file_path)
         if img.ndim == 3:
             # TODO - handle non B&W images
@@ -97,14 +100,19 @@ if __name__ == "__main__":
         generate_diff(p_img_denoised, img, f"{output_dir}diff-p/{file_name}")
         generate_diff(sp_img_denoised, img, f"{output_dir}diff-sp/{file_name}")
 
+        # MAE
+        print(f"MAE: {mae(img, g_img_denoised)}")
+        print(f"MAE: {mae(img, p_img_denoised)}")
+        print(f"MAE: {mae(img, sp_img_denoised)}")
+
         # MSE
-        print(mse(img, g_img_denoised))
-        print(mse(img, p_img_denoised))
-        print(mse(img, sp_img_denoised))
+        print(f"MSE: {mse(img, g_img_denoised)}")
+        print(f"MSE: {mse(img, p_img_denoised)}")
+        print(f"MSE: {mse(img, sp_img_denoised)}")
 
         # PSNR
-        print(psnr(img, g_img_denoised))
-        print(psnr(img, p_img_denoised))
-        print(psnr(img, sp_img_denoised))
+        print(f"PSNR: {psnr(img, g_img_denoised)}")
+        print(f"PSNR: {psnr(img, p_img_denoised)}")
+        print(f"PSNR: {psnr(img, sp_img_denoised)}")
 
         print()
