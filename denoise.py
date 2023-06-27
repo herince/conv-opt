@@ -9,7 +9,11 @@ def write_file(path, img):
     iio.imwrite(path, img)
 
 def generate_diff(original_img, denoised_img, diff_file_path):
-    img_diff = original_img - denoised_img
+    img_diff = original_img
+    for i in range(0, len(original_img)):
+        for j in range(0, len(original_img[i])):
+            img_diff[i][j] = abs(original_img[i][j].astype(np.int16) - denoised_img[i][j].astype(np.int16))
+    img_diff = img_diff.astype(np.uint8)
     write_file(diff_file_path, img_diff)
 
 def divergence(m):
@@ -17,13 +21,13 @@ def divergence(m):
     return np.ufunc.reduce(np.add, [np.gradient(m[i], axis=i) for i in range(n)])
 
 def gradient_descent(path, img):
-    tau = 0.1
-    lambda_ = 2
+    tau = 0.2
+    lambda_ = 1
     img_f = img.astype(float)
     normalized_img_f = normalize(img_f)
     denoised_img = normalized_img_f
 
-    for _ in range(1, 50):
+    for _ in range(1, 20):
         # Тhe gradient and maybe the divergence (?) need to be calculated differently for RGB images
         gr = np.gradient(denoised_img)
         denoised_img = denoised_img - tau * (denoised_img - normalized_img_f - lambda_ * divergence(gr))
@@ -85,7 +89,7 @@ if __name__ == "__main__":
         img = iio.imread(file_path)
 
         # Apply Gaussian noise
-        g_img_out = (skimage.util.random_noise(img, mode="gaussian", var=0.00025) * 255).astype(np.uint8) 
+        g_img_out = (skimage.util.random_noise(img, mode="gaussian", var=0.025) * 255).astype(np.uint8) 
         write_file(f"{output_dir}gaussian-noise/{file_name}", g_img_out)
 
         # Apply Poisson noise
@@ -93,7 +97,7 @@ if __name__ == "__main__":
         write_file(f"{output_dir}poisson-noise/{file_name}", p_img_out)
 
         # Apply salt-and-pepper noise
-        sp_img_out = (skimage.util.random_noise(img, mode="s&p", amount=0.00025) * 255).astype(np.uint8)
+        sp_img_out = (skimage.util.random_noise(img, mode="s&p", amount=0.025) * 255).astype(np.uint8)
         write_file(f"{output_dir}salt-and-pepper/{file_name}", sp_img_out)
 
         # Gradient descent
