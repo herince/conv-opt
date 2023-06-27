@@ -9,7 +9,7 @@ def write_file(path, img):
     iio.imwrite(path, img)
 
 def generate_diff(original_img, denoised_img, diff_file_path):
-    img_diff = denoised_img - original_img
+    img_diff = original_img - denoised_img
     write_file(diff_file_path, img_diff)
 
 def divergence(m):
@@ -18,24 +18,26 @@ def divergence(m):
 
 def gradient_descent(path, img):
     tau = 0.1
-    lambda_ = 50
-    denoised_img = img.astype(float)
-
-    initial_max = max(map(max, denoised_img))
-
-    denoised_img = normalize(denoised_img)
+    lambda_ = 2
+    img_f = img.astype(float)
+    normalized_img_f = normalize(img_f)
+    denoised_img = normalized_img_f
 
     for _ in range(1, 50):
+        # Тhe gradient and maybe the divergence (?) need to be calculated differently for RGB images
         gr = np.gradient(denoised_img)
-        denoised_img = denoised_img - tau * (denoised_img - img.astype(float) - lambda_ * divergence(gr))
+        denoised_img = denoised_img - tau * (denoised_img - normalized_img_f - lambda_ * divergence(gr))
         denoised_img = normalize(denoised_img)
 
-    denoised_img = (denoised_img * initial_max).astype(np.uint8)
+    denoised_img = (denoised_img * 255).round().astype(np.uint8)
     write_file(path, denoised_img)
 
     return denoised_img
 
 def normalize(img):
+    if img.ndim == 3:
+        return normalize_rgb(img)
+
     minimum = min(map(min, img))
     maximum = max(map(max, img))
     for i in range(0, len(img)):
@@ -44,6 +46,16 @@ def normalize(img):
                 img[i][j] = (img[i][j] - minimum) / ((maximum - minimum))
             else:
                 img[i][j] = 0
+    return img
+
+def normalize_rgb(img):
+    for i in range(0, len(img)):
+        for j in range(0, len(img[i])):
+            s = math.sqrt(sum(img[i][j] ** 2))
+            if s > 0:
+                img[i][j] = [img[i][j][0] / s, img[i][j][1] / s, img[i][j][2] / s]
+            else:
+                img[i][j] = [0, 0, 0]
     return img
 
 def mae(img, denoised_img):
@@ -71,13 +83,9 @@ if __name__ == "__main__":
         print("File:", file_path)
         
         img = iio.imread(file_path)
-        if img.ndim == 3:
-            # TODO - handle non B&W images
-            print("Skip RGB images\n")
-            continue
 
         # Apply Gaussian noise
-        g_img_out = (skimage.util.random_noise(img, mode="gaussian", mean=0, var=0.00025) * 255).astype(np.uint8) 
+        g_img_out = (skimage.util.random_noise(img, mode="gaussian", var=0.00025) * 255).astype(np.uint8) 
         write_file(f"{output_dir}gaussian-noise/{file_name}", g_img_out)
 
         # Apply Poisson noise
@@ -85,7 +93,7 @@ if __name__ == "__main__":
         write_file(f"{output_dir}poisson-noise/{file_name}", p_img_out)
 
         # Apply salt-and-pepper noise
-        sp_img_out = (skimage.util.random_noise(img, mode="s&p", amount=0.025) * 255).astype(np.uint8)
+        sp_img_out = (skimage.util.random_noise(img, mode="s&p", amount=0.00025) * 255).astype(np.uint8)
         write_file(f"{output_dir}salt-and-pepper/{file_name}", sp_img_out)
 
         # Gradient descent
