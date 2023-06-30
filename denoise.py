@@ -87,6 +87,9 @@ if __name__ == "__main__":
         print("File:", file_path)
         
         img = iio.imread(file_path)
+        if img.ndim == 3:
+            print("Skip RGB image\n")
+            continue
 
         # Apply Gaussian noise
         g_img_out = (skimage.util.random_noise(img, mode="gaussian", var=0.025) * 255).astype(np.uint8) 
@@ -104,8 +107,6 @@ if __name__ == "__main__":
         g_img_denoised = gradient_descent(f"{output_dir}denoised-g/{file_name}", g_img_out)
         p_img_denoised = gradient_descent(f"{output_dir}denoised-p/{file_name}", p_img_out)
         sp_img_denoised = gradient_descent(f"{output_dir}denoised-sp/{file_name}", sp_img_out)
-
-        # L2H1
 
         # Generate diffs
         generate_diff(g_img_denoised, img, f"{output_dir}diff-g/{file_name}")
